@@ -53,11 +53,16 @@ def merge_upper_and_lower_staff(voices: list[list[EncodedSymbolWithPos]]) -> lis
     return result
 
 
+def _is_dynamics_or_hairpin(rhythm: str) -> bool:
+    return rhythm.startswith(("dynamic_", "crescendo", "diminuendo"))
+
+
 def create_chord_over_two_staffs(symbols: list[EncodedSymbol]) -> list[EncodedSymbol]:
     barlines = []
     key = []
     time = []
     clef = []
+    dynamics = []
     notes_or_rests = []
     for symbol in symbols:
         rhythm = symbol.rhythm
@@ -72,6 +77,8 @@ def create_chord_over_two_staffs(symbols: list[EncodedSymbol]) -> list[EncodedSy
                 time.append(symbol)
         elif rhythm.startswith("clef"):
             clef.append(symbol)
+        elif _is_dynamics_or_hairpin(rhythm):
+            dynamics.append(symbol)
         else:
             notes_or_rests.append(symbol)
     result = []
@@ -83,6 +90,7 @@ def create_chord_over_two_staffs(symbols: list[EncodedSymbol]) -> list[EncodedSy
         result.append(symbol)
     result.extend(key)
     result.extend(time)
+    result.extend(dynamics)
 
     for i, symbol in enumerate(notes_or_rests):
         is_first = i == 0

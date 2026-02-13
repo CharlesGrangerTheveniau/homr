@@ -262,7 +262,7 @@ def build_pitch() -> dict[str, int]:
 
 
 def has_rhythm_symbol_a_position(rhythm: str) -> bool:
-    return rhythm.startswith(("note", "rest", "clef"))
+    return rhythm.startswith(("note", "rest", "clef", "dynamic", "crescendo", "diminuendo"))
 
 
 class Vocabulary:

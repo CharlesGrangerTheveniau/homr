@@ -215,6 +215,15 @@ def build_measures(
             volta_number = state.stop_volta(measure_number)
             barline = build_or_get_barline(current_measure, "right")
             build_barline_ending(symbol, barline, volta_number)
+        elif rhythm.startswith("dynamic_"):
+            current_measure.add_child(build_dynamic_direction(symbol))
+        elif rhythm in (
+            "crescendoStart",
+            "diminuendoStart",
+            "crescendoEnd",
+            "diminuendoEnd",
+        ):
+            current_measure.add_child(build_wedge_direction(symbol))
         else:
             eprint("Symbol isn't supported yet ", symbol)
 
@@ -361,6 +370,20 @@ def build_repeat(barline: EncodedSymbol, xml: mxl.XMLBarline) -> None:
     direction = "forward" if barline.rhythm == "repeatStart" else "backward"
     repeat._set_attributes({"direction": direction})
     xml.add_child(repeat)
+
+
+DYNAMIC_XML_CLASSES: dict[str, type] = {
+    "ppp": mxl.XMLPpp,
+    "pp": mxl.XMLPp,
+    "p": mxl.XMLP,
+    "mp": mxl.XMLMp,
+    "mf": mxl.XMLMf,
+    "f": mxl.XMLF,
+    "ff": mxl.XMLFf,
+    "fff": mxl.XMLFff,
+    "sfz": mxl.XMLSfz,
+    "fp": mxl.XMLFp,
+}
 
 
 LIFT_TO_ALTER = {
@@ -591,6 +614,36 @@ def build_add_time_direction(args: XmlGeneratorArguments) -> mxl.XMLDirection | 
         direction.add_child(mxl.XMLSound(tempo=args.tempo))
     else:
         direction.add_child(mxl.XMLSound(tempo=args.metronome))
+    return direction
+
+
+def build_dynamic_direction(symbol: EncodedSymbol) -> mxl.XMLDirection:
+    dynamic_name = symbol.rhythm.split("_")[1]
+    direction = mxl.XMLDirection(placement="below")
+    direction_type = mxl.XMLDirectionType()
+    direction.add_child(direction_type)
+    dynamics = mxl.XMLDynamics()
+    direction_type.add_child(dynamics)
+    dynamic_class = DYNAMIC_XML_CLASSES.get(dynamic_name)
+    if dynamic_class:
+        dynamics.add_child(dynamic_class())
+    direction.add_child(mxl.XMLStaff(value_=get_staff(symbol)))
+    return direction
+
+
+def build_wedge_direction(symbol: EncodedSymbol) -> mxl.XMLDirection:
+    rhythm = symbol.rhythm
+    if rhythm == "crescendoStart":
+        wedge_type = "crescendo"
+    elif rhythm == "diminuendoStart":
+        wedge_type = "diminuendo"
+    else:
+        wedge_type = "stop"
+    direction = mxl.XMLDirection(placement="below")
+    direction_type = mxl.XMLDirectionType()
+    direction.add_child(direction_type)
+    direction_type.add_child(mxl.XMLWedge(type=wedge_type))
+    direction.add_child(mxl.XMLStaff(value_=get_staff(symbol)))
     return direction
 
 
