@@ -18,6 +18,8 @@ from training.transformer.training_vocabulary import VocabularyStats, check_toke
 
 DURATION_NUMBER = {v: k for k, v in DURATION_NAMES.items()}
 
+DYNAMICS_TOKENS = {"ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sfz", "fp"}
+
 ARTIC_MAPPING: dict[str, str] = {
     "strongAccent": "accent",
     "softAccent": "accent",
@@ -488,8 +490,52 @@ def _process_multi_rests(part: TokensPart, measure_style: mxl.XMLMeasureStyle) -
     part.append_symbol(EncodedSymbol(f"rest_{rest_duration}m", empty, empty, empty, "upper"))
 
 
+def _process_direction(
+    part: TokensPart,
+    direction: mxl.XMLDirection,
+    wedge_state: dict[int, str],
+) -> None:
+    """Process a MusicXML <direction> element, extracting dynamics and wedges."""
+    if part.current_measure is None:
+        return
+
+    staff = 0
+    staff_nodes = direction.get_children_of_type(mxl.XMLStaff)
+    if len(staff_nodes) > 0:
+        staff = int(staff_nodes[0].value_) - 1
+
+    direction_types = direction.get_children_of_type(mxl.XMLDirectionType)
+    for direction_type in direction_types:
+        for dynamics in direction_type.get_children_of_type(mxl.XMLDynamics):
+            for child in dynamics.get_children():
+                name = child.__class__.__name__[3:].lower()
+                if name in DYNAMICS_TOKENS:
+                    symbol = EncodedSymbol(f"dynamic_{name}", empty, empty, empty)
+                    part.current_measure.append_symbol_to_staff(staff, symbol)
+
+        for wedge in direction_type.get_children_of_type(mxl.XMLWedge):
+            wedge_type = wedge.attributes.get("type", "")
+            if wedge_type == "crescendo":
+                symbol = EncodedSymbol("crescendoStart", empty, empty, empty)
+                part.current_measure.append_symbol_to_staff(staff, symbol)
+                wedge_state[staff] = "crescendo"
+            elif wedge_type == "diminuendo":
+                symbol = EncodedSymbol("diminuendoStart", empty, empty, empty)
+                part.current_measure.append_symbol_to_staff(staff, symbol)
+                wedge_state[staff] = "diminuendo"
+            elif wedge_type == "stop":
+                last_wedge = wedge_state.get(staff, "crescendo")
+                if last_wedge == "diminuendo":
+                    end_token = "diminuendoEnd"
+                else:
+                    end_token = "crescendoEnd"
+                symbol = EncodedSymbol(end_token, empty, empty, empty)
+                part.current_measure.append_symbol_to_staff(staff, symbol)
+
+
 def _music_part_to_tokens(part: mxl.XMLPart) -> list[list[EncodedSymbol]]:
     tokens = TokensPart()
+    wedge_state: dict[int, str] = {}
     for measure in part.get_children_of_type(mxl.XMLMeasure):
         for child in measure.get_children():
             if isinstance(child, mxl.XMLAttributes):
@@ -502,6 +548,8 @@ def _music_part_to_tokens(part: mxl.XMLPart) -> list[list[EncodedSymbol]]:
                 _process_forward(tokens, child)
             if isinstance(child, mxl.XMLBarline):
                 _process_barline(tokens, child)
+            if isinstance(child, mxl.XMLDirection):
+                _process_direction(tokens, child, wedge_state)
         tokens.on_end_of_measure()
     return _cleanup_barlines_and_repeats(tokens.get_measures())
 
