@@ -6,7 +6,6 @@ from torch.export import Dim
 from homr.segmentation.config import segnet_path_onnx, segnet_path_torch
 from homr.simple_logging import eprint
 from homr.transformer.configs import Config
-from training.architecture.segmentation.model import create_segnet  # type: ignore
 from training.architecture.transformer.decoder import (
     ScoreTransformerWrapper,
     get_score_wrapper,
@@ -175,6 +174,7 @@ def convert_decoder() -> str:
         opset_version=18,
         do_constant_folding=True,
         export_params=True,
+        dynamo=False,
     )
     return path_out
 
@@ -183,6 +183,8 @@ def convert_segnet() -> str:
     """
     Converts the segnet model to onnx.
     """
+    from training.architecture.segmentation.model import create_segnet  # type: ignore
+
     path_out = segnet_path_onnx
 
     if os.path.exists(path_out):

@@ -256,6 +256,13 @@ class ScoreDecoder(nn.Module):
                 note_mask[index] = 1
         self.note_mask = nn.Parameter(note_mask)
 
+        # Upweight dynamics tokens to counter severe class imbalance (~0.05% of tokens).
+        # All 14 dynamics/hairpin tokens get 50x weight; tune if needed.
+        rhythm_weights = torch.ones(config.num_rhythm_tokens)
+        dynamics_start = config.rhythm_vocab["dynamic_ppp"]
+        rhythm_weights[dynamics_start:] = 50.0
+        self.register_buffer("rhythm_weights", rhythm_weights)
+
         # Weight the actual lift tokens (so neither nonote nor null) higher
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -401,7 +408,7 @@ class ScoreDecoder(nn.Module):
         loss_consist = self.calConsistencyLoss(
             rhythmsp, pitchsp, liftsp, positionsp, articulationsp, mask
         )
-        loss_rhythm = self.masked_logits_cross_entropy(rhythmsp, rhythmso, mask)
+        loss_rhythm = self.masked_logits_cross_entropy(rhythmsp, rhythmso, mask, self.rhythm_weights)
         loss_pitch = self.masked_logits_cross_entropy(pitchsp, pitchso, mask)
         loss_lift = self.masked_logits_cross_entropy(liftsp, liftso, mask)
         loss_articulations = self.masked_logits_cross_entropy(articulationsp, articulationso, mask)

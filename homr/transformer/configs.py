@@ -10,7 +10,7 @@ root_dir = os.getcwd()
 
 class FilePaths:
     def __init__(self) -> None:
-        model_name = "pytorch_model_286-0daf75fea21e6ea6a865405e03a4bc7e73e9aa14"
+        model_name = "pytorch_model_318-dc08287f5bc389535aa31647bcfb9d90a09d83e2"
         self.encoder_path = os.path.join(
             workspace,
             f"encoder_{model_name}.onnx",
@@ -31,9 +31,7 @@ class FilePaths:
 
         self.checkpoint = os.path.join(
             root_dir,
-            "training",
-            "architecture",
-            "transformer",
+            "training_results",
             f"{model_name}.pth",
         )
 
