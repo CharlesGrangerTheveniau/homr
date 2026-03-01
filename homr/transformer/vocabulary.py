@@ -70,17 +70,17 @@ def build_rhythm() -> dict[str, int]:
     rhythm.extend(["tieSlur"])  #  "gliss"
 
     # Dynamics
-    # rhythm.extend(
-    #    [f"dynamic_{d}" for d in ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sfz", "fp"]]
-    # )
-    # rhythm.extend(
-    #    [
-    #        "crescendoStart",
-    #        "crescendoEnd",
-    #        "diminuendoStart",
-    #        "diminuendoEnd",
-    #    ]
-    # )
+    rhythm.extend(
+       [f"dynamic_{d}" for d in ["ppp", "pp", "p", "mp", "mf", "f", "ff", "fff", "sfz", "fp"]]
+    )
+    rhythm.extend(
+       [
+           "crescendoStart",
+           "crescendoEnd",
+           "diminuendoStart",
+           "diminuendoEnd",
+       ]
+    )
 
     return build_dict(rhythm)
 
